@@ -89,7 +89,7 @@ END_DATE = "endDate="
 
 def get_hltv_results_url(
         stars: int | None = None,
-        mapnames: list | None = None,
+        mapnames: list[str] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
 ) -> str:
@@ -117,9 +117,9 @@ def get_hltv_results_url(
 # print(get_hltv_results_url())
 # print(get_hltv_results_url(stars=3))
 # print(get_hltv_results_url(mapnames=["de_cache"]))
-print(get_hltv_results_url(stars=3, mapnames=["de_cache"]))
-print(get_hltv_results_url(stars=3, mapnames=[]))
-
-# https://www.hltv.org/results?stars=3&map=de_cache&map=de_mirage
-print(get_hltv_results_url(mapnames=["de_cache", "de_mirage"]))
-print(get_hltv_results_url(stars=3, mapnames=["de_cache", "de_mirage"], start_date="2022-02-22", end_date="2023-03-05"))
+# print(get_hltv_results_url(stars=3, mapnames=["de_cache"]))
+# print(get_hltv_results_url(stars=3, mapnames=[]))
+#
+# # https://www.hltv.org/results?stars=3&map=de_cache&map=de_mirage
+# print(get_hltv_results_url(mapnames=["de_cache", "de_mirage"]))
+# print(get_hltv_results_url(stars=3, mapnames=["de_cache", "de_mirage"], start_date="2022-02-22", end_date="2023-03-05"))
