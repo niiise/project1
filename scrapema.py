@@ -23,36 +23,41 @@ class SeriesResult:
         print(str(self.stars_number) + " stars")
 
 
+def make_series_result_from_element(result_element) -> SeriesResult:
+    team_elements = result_element.findChildren("div", {"class": "team"})
+    for team_element in team_elements:  # element["class"]
+        # print(team_element["class"])
+        # from this we know this is a list: team_element["class"]
+        # check if an element is in a list: "team-won" in team_element["class"]
+        if "team-won" in team_element["class"]:
+            winner_name = team_element.text
+        else:
+            loser_name = team_element.text
+
+    tournament_name = result_element.findChild("span", {"class": "event-name"}).text
+    score_won = result_element.findChild("span", {"class": "score-won"}).text
+    score_lost = result_element.findChild("span", {"class": "score-lost"}).text
+    series_type = result_element.findChild("div", {"class": "map-text"}).text
+    stars_number = len(result_element.findChildren("i", {"class": "star"}))
+
+    series_result = SeriesResult(winner_name, loser_name, tournament_name, score_won, score_lost, series_type, stars_number)
+    return series_result
+
+
 def get_results_for_url(url: str) -> list[SeriesResult]:
     series_results: list[SeriesResult] = []
     response = requests.get(url)  # downloads the hltv webpage source HTML
     soup = bs4.BeautifulSoup(response.content, features="html.parser")  # allows us to search the HTML
 
     # We noticed that all the results we want match this search
-    result_elements = soup.find("div", {"class": "allres"}).findChildren("div", {"class": "result"})
-    for result_element in result_elements:
-        # get all elements <div> that have class="team", in this case Grayhound and 00NATION
-        # list of two elements, <div class="team-won team">Grayhound</div> and <div class="team">00NATION</div>
-        # elements_inside_our_result_that_are_probably_a_team_name
-        team_elements = result_element.findChildren("div", {"class": "team"})
+    search_results_element = soup.find("div", {"class": "allres"})  # Excludes featured results section at top
+    results_by_date_elements = search_results_element.findChildren("div", {"class": "results-sublist"})  # Example in htmlma.html
 
-        for team_element in team_elements:  # element["class"]
-            # print(team_element["class"])
-            # from this we know this is a list: team_element["class"]
-            # check if an element is in a list: "team-won" in team_element["class"]
-            if "team-won" in team_element["class"]:
-                winner_name = team_element.text
-            else:
-                loser_name = team_element.text
-
-        tournament_name = result_element.findChild("span", {"class": "event-name"}).text
-        score_won = result_element.findChild("span", {"class": "score-won"}).text
-        score_lost = result_element.findChild("span", {"class": "score-lost"}).text
-        series_type = result_element.findChild("div", {"class": "map-text"}).text
-        stars_number = len(result_element.findChildren("i", {"class": "star"}))
-
-        series_result = SeriesResult(winner_name, loser_name, tournament_name, score_won, score_lost, series_type, stars_number)
-        series_results.append(series_result)
+    for results_sublist_element in results_by_date_elements:
+        result_con_elements = results_sublist_element.findChildren("div", {"class": "result-con"})
+        for result_con_element in result_con_elements:
+            series_result = make_series_result_from_element(result_con_element)
+            series_results.append(series_result)
     return series_results
 
 
@@ -71,41 +76,3 @@ def main():
 
 
 main()
-
-"""
-<div class="result">  <----- tag is "div", element has {"class": "result"}
-    <table>
-        <tr>
-            <td class="team-cell">
-                <div class="line-align team1">
-                    <div class="team-won team">Grayhound</div> <---- second search, children with tag div, class=team
-                    <img alt="Grayhound" class="team-logo" src="https://img-cdn.hltv.org/teamlogo/IjyAECYg-7zLXJEUj-aRqa.svg?ixlib=java-2.1.0&amp;s=def9c53f5b91c85af4a5a0a6f2606d26" title="Grayhound"/>
-                </div>
-            </td>
-            <td class="result-score">
-                <span class="score-won">2</span> - <span class="score-lost">1</span>
-            </td>
-            <td class="team-cell">
-                <div class="line-align team2">
-                    <img alt="00NATION" class="team-logo" src="https://img-cdn.hltv.org/teamlogo/-LUi1MZwRXN6fQ_pbha7Ke.png?ixlib=java-2.1.0&amp;w=50&amp;s=c030a8759455d70338739d5643e39172" title="00NATION"/>
-                    <div class="team">00NATION</div>  <--- the second result we get for {"class": "team"}
-                </div>
-            </td>
-            <td class="event">
-                <img alt="ESL Pro League Season 17" class="event-logo smartphone-only" src="https://img-cdn.hltv.org/eventlogo/PhVPy7kXO_J_nfTng7a87h.png?ixlib=java-2.1.0&amp;w=50&amp;s=a56cc668c5dfeb6b8bc8676b7ad8021a" title="ESL Pro League Season 17"/>
-                <span class="event-name">ESL Pro League Season 17</span>
-            </td>
-            <td class="star-cell">
-                <div class="map-and-stars">
-                    <div class="stars">
-                        <i class="fa fa-star star"></i>
-                        <i class="fa fa-star star"></i>
-                        <i class="fa fa-star star"></i>
-                    </div>
-                    <div class="map map-text">bo3</div>
-                </div>
-            </td>
-        </tr>
-    </table>
-</div>
-"""
