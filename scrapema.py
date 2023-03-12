@@ -5,64 +5,72 @@ import requests
 
 # TODO: try doing this with different URLs to check it works
 # TODO: try coming up with a URL that returns no results
+class SeriesResult:
+    def __init__(self, winner_name, loser_name, tournament_name, score_won, score_lost, series_type, stars_number):
+        self.winner_name = winner_name
+        self.loser_name = loser_name
+        self.tournament_name = tournament_name
+        self.score_won = score_won
+        self.score_lost = score_lost
+        self.series_type = series_type
+        self.stars_number = stars_number
 
-url = sugma.get_hltv_results_url(
-    stars=3,
-    mapnames=["de_cache", "de_mirage"],
-    start_date="2022-02-22",
-    end_date="2023-03-05",
-)
+    def display(self):
+        print("Tournament: " + self.tournament_name)
+        print("Winner: " + self.winner_name + ", Loser: " + self.loser_name)
+        print("Score: " + self.score_won + " - " + self.score_lost)
+        print("Series Type: " + self.series_type)
+        print(str(self.stars_number) + " stars")
 
-# TODO: turn this & down into a function that accepts a URL and prints the results from that page
-response = requests.get(url)
 
-# HTTP status codes: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status (not important lol)
-# Web pages are made of HTML (structure), CSS (designs), JavaScript (code to make it do stuff)
+def get_results_for_url(url: str) -> list[SeriesResult]:
+    series_results: list[SeriesResult] = []
+    response = requests.get(url)  # downloads the hltv webpage source HTML
+    soup = bs4.BeautifulSoup(response.content, features="html.parser")  # allows us to search the HTML
 
-print(url)
-# print(response.content)
+    # We noticed that all the results we want match this search
+    result_elements = soup.find("div", {"class": "allres"}).findChildren("div", {"class": "result"})
+    for result_element in result_elements:
+        # get all elements <div> that have class="team", in this case Grayhound and 00NATION
+        # list of two elements, <div class="team-won team">Grayhound</div> and <div class="team">00NATION</div>
+        # elements_inside_our_result_that_are_probably_a_team_name
+        team_elements = result_element.findChildren("div", {"class": "team"})
 
-# requests: http part: gets a webpage from a server, downloads the HTML
-# bs4: represent the html as Python (instead of us doing rudimentary text search) & allow us to query the document
+        for team_element in team_elements:  # element["class"]
+            # print(team_element["class"])
+            # from this we know this is a list: team_element["class"]
+            # check if an element is in a list: "team-won" in team_element["class"]
+            if "team-won" in team_element["class"]:
+                winner_name = team_element.text
+            else:
+                loser_name = team_element.text
 
-# think of soup as containing the whole page
-soup = bs4.BeautifulSoup(response.content, features="html.parser")
+        tournament_name = result_element.findChild("span", {"class": "event-name"}).text
+        score_won = result_element.findChild("span", {"class": "score-won"}).text
+        score_lost = result_element.findChild("span", {"class": "score-lost"}).text
+        series_type = result_element.findChild("div", {"class": "map-text"}).text
+        stars_number = len(result_element.findChildren("i", {"class": "star"}))
 
-# docs: https://www.crummy.com/software/BeautifulSoup/bs4/doc/#kinds-of-filters
-# trivia: div is an html tag, open tag <div>, close tag </div>
-# for each element in here, we would expect element["class"] to be "result"
-elements_that_probably_have_match_results = soup.find_all("div", {"class": "result"})
+        series_result = SeriesResult(winner_name, loser_name, tournament_name, score_won, score_lost, series_type, stars_number)
+        series_results.append(series_result)
+    return series_results
 
-# TODO: (later, this is probably too hard to bother trying): print the date before each of these (we will have to modify
-# the initial find_all above)^^
-# maybe this would look like results_sublist_element = find_all("results-sublists")
-# you could get the date by findChild in results_sublist_element
-# then you have to find result_element by doing results_sublist_element.findChild("result") etc.
 
-for result_element in elements_that_probably_have_match_results:
-    # get all elements <div> that have class="team", in this case Grayhound and 00NATION
-    # list of two elements, <div class="team-won team">Grayhound</div> and <div class="team">00NATION</div>
-    # elements_inside_our_result_that_are_probably_a_team_name
-    team_elements = result_element.findChildren("div", {"class": "team"})
+def main():
+    url = sugma.get_hltv_results_url(
+        stars=3,
+        mapnames=["de_cache", "de_mirage"],
+        start_date="2022-02-22",
+        end_date="2023-03-05",
+    )
 
-    for team_element in team_elements:  # element["class"]
-        # print(team_element["class"])
-        # from this we know this is a list: team_element["class"]
-        # check if an element is in a list: "team-won" in team_element["class"]
-        if "team-won" in team_element["class"]:
-            winner_name = team_element.text
-        else:
-            loser_name = team_element.text
+    series_results = get_results_for_url(url)
+    for series_result in series_results:
+        series_result.display()
+        print("----------------------")
 
-    # Winner: Grayhound, loser: 00NATION
-    # TODO: (low priority) get this code to work and not have these errors (you might need to define the variables ahead of time)
-    print("Winner: " + winner_name + ", Loser: " + loser_name)
 
-    # TODO (try me first): print the tournament name
-    # TODO (try me first: tricky): print the score
-    # TODO (try me first: tricky): print "bo3", "bo5", "mrg", etc.
-    # TODO (very tricky, will be impressed if you get this): print the number of stars
-
+main()
 
 """
 <div class="result">  <----- tag is "div", element has {"class": "result"}
@@ -83,9 +91,19 @@ for result_element in elements_that_probably_have_match_results:
                     <div class="team">00NATION</div>  <--- the second result we get for {"class": "team"}
                 </div>
             </td>
-            <td class="event"><img alt="ESL Pro League Season 17" class="event-logo smartphone-only" src="https://img-cdn.hltv.org/eventlogo/PhVPy7kXO_J_nfTng7a87h.png?ixlib=java-2.1.0&amp;w=50&amp;s=a56cc668c5dfeb6b8bc8676b7ad8021a" title="ESL Pro League Season 17"/><span class="event-name">ESL Pro League Season 17</span></td>
+            <td class="event">
+                <img alt="ESL Pro League Season 17" class="event-logo smartphone-only" src="https://img-cdn.hltv.org/eventlogo/PhVPy7kXO_J_nfTng7a87h.png?ixlib=java-2.1.0&amp;w=50&amp;s=a56cc668c5dfeb6b8bc8676b7ad8021a" title="ESL Pro League Season 17"/>
+                <span class="event-name">ESL Pro League Season 17</span>
+            </td>
             <td class="star-cell">
-            <div class="map-text">bo3</div>
+                <div class="map-and-stars">
+                    <div class="stars">
+                        <i class="fa fa-star star"></i>
+                        <i class="fa fa-star star"></i>
+                        <i class="fa fa-star star"></i>
+                    </div>
+                    <div class="map map-text">bo3</div>
+                </div>
             </td>
         </tr>
     </table>
